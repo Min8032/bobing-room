@@ -4,7 +4,7 @@ html, body { height: 100%; }
 body {
   margin: 0;
   font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-  background: #6b4226 url(../assets/table.jpg) center / cover no-repeat;
+  background: #e62a1f url(../assets/bg.jpg) center / cover no-repeat;
   color: #ffe9c9;
   user-select: none;
 }
@@ -147,10 +147,7 @@ header {
   width: min(94vw, 66vh, 520px);
   aspect-ratio: 1;
 }
-.bowl-wrap .bowl {
-  width: 100%; display: block;
-  filter: drop-shadow(0 16px 22px rgba(0, 0, 0, .48));
-}
+.bowl-wrap .bowl { display: none; }
 #bowlDice { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
 #bowlDice img {
   position: absolute;
