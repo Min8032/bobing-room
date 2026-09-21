@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>中秋博饼</title>
+<link rel="stylesheet" href="css/style.css?v=1">
+</head>
+<body>
+
+<!-- ===== 大厅 ===== -->
+<div id="lobby" class="screen">
+  <div class="panel">
+    <h1>🥮 中秋博饼</h1>
+    <p class="slogan">六骰落红碗 · 状元等你拿 · 点开就玩</p>
+    <input id="nickname" maxlength="8" placeholder="你的昵称">
+    <input id="roomCode" maxlength="12" placeholder="房间密码（4~12 位数字或字母）">
+    <div class="btn-row">
+      <button id="btnCreate" class="primary">创建房间</button>
+      <button id="btnJoin">加入房间</button>
+    </div>
+    <p id="lobbyMsg" class="msg"></p>
+    <p class="hint">把本页链接发到微信群，朋友输入相同房间密码即可同桌博饼（最多 16 人）</p>
+  </div>
+</div>
+
+<!-- ===== 博饼桌 ===== -->
+<div id="table" class="screen hidden">
+  <header>
+    <span id="roomInfo" title="点击复制房间密码"></span>
+    <button id="btnLeave" class="link-btn">离开房间</button>
+  </header>
+
+  <!-- 上排玩家 -->
+  <div id="rowTop" class="player-row"></div>
+
+  <!-- 中间：左结果 + 红碗 -->
+  <div class="center-area">
+    <div class="result-panel">
+      <div id="resultName" class="result-name lv0">博饼</div>
+      <div id="resultWho" class="result-who">中秋快乐</div>
+    </div>
+    <div class="bowl-wrap">
+      <img class="bowl" src="assets/bowl.png" alt="碗">
+      <div id="bowlDice"></div>
+      <div id="bowlHint" class="bowl-hint"></div>
+    </div>
+  </div>
+
+  <!-- 下排玩家 -->
+  <div id="rowBottom" class="player-row"></div>
+
+  <div id="statusBar"></div>
+</div>
+
+<script src="js/mqtt.min.js?v=1"></script>
+<script src="js/net.js?v=1"></script>
+<script src="js/game.js?v=1"></script>
+</body>
+</html>
