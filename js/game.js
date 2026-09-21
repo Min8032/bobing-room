@@ -279,13 +279,14 @@
     }
   }
 
-  // 骰子在碗里的位置：由局数序号决定伪随机布局（所有端显示一致），3列×2行带抖动
+  // 骰子在碗里的位置：由局数序号决定伪随机布局（所有端显示一致），3列×2行
+  // 间距 23% > 骰子宽 17% × 旋转放大系数，保证不重叠、数字都能看清
   function dicePos(seq, i) {
     const rand = mulberry32(seq * 100 + i);
     const col = i % 3, row = (i / 3) | 0;
-    const x = 32 + col * 18 + (rand() - 0.5) * 9;    // 32/50/68 ± 4.5
-    const y = 31 + row * 32 + (rand() - 0.5) * 10;   // 31/63 ± 5
-    const r = Math.round((rand() - 0.5) * 50);       // ±25°
+    const x = 27 + col * 23 + (rand() - 0.5) * 3;    // 27/50/73 ± 1.5
+    const y = 29 + row * 36 + (rand() - 0.5) * 3;    // 29/65 ± 1.5
+    const r = Math.round((rand() - 0.5) * 36);       // ±18°
     return { x, y, r };
   }
   function mulberry32(a) {
