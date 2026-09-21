@@ -50,6 +50,7 @@
     resultName: $('resultName'), resultWho: $('resultWho'),
     bowlDice: $('bowlDice'), bowlHint: $('bowlHint'),
     statusBar: $('statusBar'),
+    sfxRoll: $('sfxRoll'),
   };
 
   /* ---------- 工具 ---------- */
@@ -246,7 +247,6 @@
   }
 
   function renderCenter(newRoll) {
-    // 结果区（中间左侧，竖排）
     if (S.lastRoll) {
       el.resultName.textContent = S.lastRoll.result;
       el.resultName.className = 'result-name lv' + S.lastRoll.level;
@@ -256,7 +256,6 @@
       el.resultName.className = 'result-name lv0';
       el.resultWho.textContent = '中秋快乐';
     }
-    // 碗里骰子
     el.bowlDice.innerHTML = '';
     if (S.lastRoll) {
       S.lastRoll.dice.forEach((v, i) => {
@@ -266,11 +265,13 @@
         const pos = dicePos(S.lastRoll.seq, i);
         img.style.left = pos.x + '%';
         img.style.top = pos.y + '%';
-        img.style.transform = 'translate(-50%,-50%) rotate(' + pos.r + 'deg)';
-        if (newRoll) img.classList.add('pop');
+        img.style.setProperty('--r', pos.r + 'deg');
+        img.style.setProperty('--delay', (i * 0.045) + 's');
+        if (newRoll) img.classList.add('drop');
         el.bowlDice.appendChild(img);
       });
       el.bowlHint.textContent = '';
+      if (newRoll) playRollSfx();
     } else {
       const turnP = S.players.find(p => p.id === S.turn);
       el.bowlHint.textContent = turnP
@@ -279,15 +280,21 @@
     }
   }
 
-  // 骰子在碗里的位置：由局数序号决定伪随机布局（所有端显示一致），3列×2行
-  // 间距 23% > 骰子宽 17% × 旋转放大系数，保证不重叠、数字都能看清
+  // 碗底中央一簇：中心 1 颗 + 周围 5 颗（所有端同一伪随机，互不重叠）
   function dicePos(seq, i) {
     const rand = mulberry32(seq * 100 + i);
-    const col = i % 3, row = (i / 3) | 0;
-    const x = 27 + col * 23 + (rand() - 0.5) * 3;    // 27/50/73 ± 1.5
-    const y = 29 + row * 36 + (rand() - 0.5) * 3;    // 29/65 ± 1.5
-    const r = Math.round((rand() - 0.5) * 36);       // ±18°
-    return { x, y, r };
+    const cx = 50, cy = 57;          // 碗底中心
+    if (i === 0) {
+      return { x: cx + (rand() - 0.5) * 2.2, y: cy + (rand() - 0.5) * 2.2,
+               r: Math.round((rand() - 0.5) * 24) };
+    }
+    const ang = ((i - 1) / 5) * Math.PI * 2 - Math.PI / 2 + (rand() - 0.5) * 0.18;
+    const rr = 17.6 + (rand() - 0.5) * 1.2;
+    return {
+      x: cx + Math.cos(ang) * rr,
+      y: cy + Math.sin(ang) * rr * 0.86,
+      r: Math.round((rand() - 0.5) * 28),
+    };
   }
   function mulberry32(a) {
     return function () {
@@ -351,9 +358,29 @@
 
   function onRollClick() {
     if (!isMyTurn()) return;
+    unlockAudio();
     if (S.isHost) hostDoRoll(Net.myId);      // 房主直接本地掷
     else Net.send({ t: 'rollReq' });          // 加入者向房主请求掷骰
   }
+
+  /* ---------- 骰子碰撞声（首次点击解锁，之后各端掷骰都能响） ---------- */
+  let audioUnlocked = false;
+  function unlockAudio() {
+    if (audioUnlocked || !el.sfxRoll) return;
+    audioUnlocked = true;
+    el.sfxRoll.volume = 0.85;
+    const p = el.sfxRoll.play();
+    if (p && p.then) p.then(() => { el.sfxRoll.pause(); el.sfxRoll.currentTime = 0; }).catch(() => {});
+  }
+  function playRollSfx() {
+    if (!el.sfxRoll) return;
+    try {
+      el.sfxRoll.currentTime = 0;
+      el.sfxRoll.play().catch(() => {});
+    } catch (e) {}
+  }
+  document.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
+  document.addEventListener('click', unlockAudio, { once: true });
 
   el.btnCreate.addEventListener('click', async () => {
     const v = readInputs(); if (!v) return;

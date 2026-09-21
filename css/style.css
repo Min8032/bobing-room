@@ -4,7 +4,7 @@ html, body { height: 100%; }
 body {
   margin: 0;
   font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-  background: radial-gradient(circle at 50% 30%, #a02020 0%, #7a1010 55%, #5a0808 100%);
+  background: #6b4226 url(../assets/table.jpg) center / cover no-repeat;
   color: #ffe9c9;
   user-select: none;
 }
@@ -59,8 +59,8 @@ header {
 .pslot {
   position: relative;
   display: flex; align-items: center; gap: 4px;
-  background: rgba(0, 0, 0, .3);
-  border: 2px solid rgba(201, 138, 43, .35);
+  background: rgba(48, 18, 10, .62);
+  border: 2px solid rgba(201, 138, 43, .45);
   border-radius: 10px;
   padding: 4px 8px;
   min-width: 76px; max-width: 100%;
@@ -105,61 +105,78 @@ header {
   box-shadow: none;
 }
 
-/* ===== 中间区域：左结果 + 红碗 ===== */
+/* ===== 中间：大红碗，结果叠在碗上 ===== */
 .center-area {
   flex: 1; min-height: 0;
   display: flex; align-items: center; justify-content: center;
-  gap: 8px; padding: 4px 0;
+  padding: 2px 0;
 }
-.result-panel {
-  flex: none; width: 108px;
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
+.result-overlay {
+  position: absolute;
+  top: 11%;
+  left: 10%;
+  right: 10%;
+  text-align: center;
+  pointer-events: none;
+  z-index: 2;
 }
 .result-name {
-  writing-mode: vertical-rl;        /* 竖排更有中秋味 */
-  font-size: 34px; font-weight: bold; letter-spacing: 6px;
-  max-height: 220px;
-  color: #e8b98a;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, .6);
+  font-size: clamp(26px, 7.2vw, 40px);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #f3d27a;
+  text-shadow: 0 2px 0 #7a4a10, 0 3px 10px rgba(40, 10, 0, .55);
 }
-.result-name.lv2, .result-name.lv3 { color: #ffca7a; }
+.result-name.lv0 { color: #f0c988; letter-spacing: 0.28em; }
+.result-name.lv2, .result-name.lv3 { color: #f0c988; }
 .result-name.lv4, .result-name.lv5, .result-name.lv6 { color: #ffd54f; }
 .result-name.lv7, .result-name.lv8, .result-name.lv9,
 .result-name.lv10, .result-name.lv11, .result-name.lv12 {
-  color: #ffe27a;
-  text-shadow: 0 0 14px rgba(255, 213, 79, .9), 0 2px 6px rgba(0, 0, 0, .6);
+  color: #ffe9a0;
+  text-shadow: 0 0 16px rgba(255, 213, 79, .95), 0 2px 0 #7a4a10, 0 3px 10px rgba(40,10,0,.55);
   animation: goldGlow 1s infinite;
 }
 @keyframes goldGlow {
-  0%, 100% { text-shadow: 0 0 10px rgba(255, 213, 79, .7), 0 2px 6px rgba(0,0,0,.6); }
-  50% { text-shadow: 0 0 22px rgba(255, 213, 79, 1), 0 2px 6px rgba(0,0,0,.6); }
+  0%, 100% { text-shadow: 0 0 10px rgba(255, 213, 79, .7), 0 2px 0 #7a4a10; }
+  50% { text-shadow: 0 0 22px rgba(255, 213, 79, 1), 0 2px 0 #7a4a10; }
 }
-.result-who { font-size: 12px; color: #e8b98a; text-align: center; }
+.result-who { margin-top: 4px; font-size: 13px; color: #ffe0b0; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
 
 .bowl-wrap {
   position: relative; flex: none;
-  width: min(80vw, 54vh, 420px);
+  width: min(94vw, 66vh, 520px);
   aspect-ratio: 1;
 }
-.bowl-wrap .bowl { width: 100%; display: block; filter: drop-shadow(0 10px 18px rgba(0,0,0,.5)); }
-#bowlDice { position: absolute; inset: 0; }
-#bowlDice img {
-  position: absolute; width: 17%;
-  border-radius: 12%;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, .5);
+.bowl-wrap .bowl {
+  width: 100%; display: block;
+  filter: drop-shadow(0 16px 22px rgba(0, 0, 0, .48));
 }
-#bowlDice img.pop { animation: dicePop .35s ease-out; }
-@keyframes dicePop {
-  0% { opacity: 0; margin-top: -30px; }
-  60% { opacity: 1; margin-top: 6px; }
-  100% { margin-top: 0; }
+#bowlDice { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+#bowlDice img {
+  position: absolute;
+  width: 15%;
+  transform: translate(-50%, -50%) rotate(var(--r, 0deg));
+  transform-origin: 50% 50%;
+}
+#bowlDice img.drop {
+  animation: diceDrop .78s cubic-bezier(.18, .82, .28, 1) both;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes diceDrop {
+  0%   { transform: translate(-50%, -50%) translateY(-260%) rotate(calc(var(--r) + 160deg)) scale(.55); opacity: 0; }
+  36%  { transform: translate(-50%, -50%) translateY(10%) rotate(var(--r)) scale(1.06); opacity: 1; }
+  50%  { transform: translate(-50%, -50%) translateY(-42%) rotate(var(--r)) scale(1); }
+  64%  { transform: translate(-50%, -50%) translateY(6%) rotate(var(--r)); }
+  76%  { transform: translate(-50%, -50%) translateY(-16%) rotate(var(--r)); }
+  88%  { transform: translate(-50%, -50%) translateY(2%) rotate(var(--r)); }
+  100% { transform: translate(-50%, -50%) rotate(var(--r)); }
 }
 .bowl-hint {
-  position: absolute; left: 0; right: 0; top: 50%;
+  position: absolute; left: 0; right: 0; top: 58%;
   transform: translateY(-50%);
-  text-align: center; font-size: 15px; color: rgba(255, 233, 201, .85);
+  text-align: center; font-size: 16px; color: rgba(255, 236, 210, .92);
   text-shadow: 0 1px 4px rgba(0, 0, 0, .7);
-  pointer-events: none;
+  pointer-events: none; z-index: 2;
 }
 
 /* ===== 底部状态栏 ===== */

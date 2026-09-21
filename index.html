@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>中秋博饼</title>
-<link rel="stylesheet" href="css/style.css?v=2">
+<link rel="stylesheet" href="css/style.css?v=3">
 </head>
 <body>
 
@@ -34,18 +34,19 @@
   <!-- 上排玩家 -->
   <div id="rowTop" class="player-row"></div>
 
-  <!-- 中间：左结果 + 红碗 -->
+  <!-- 中间：红碗，结果叠在碗上 -->
   <div class="center-area">
-    <div class="result-panel">
-      <div id="resultName" class="result-name lv0">博饼</div>
-      <div id="resultWho" class="result-who">中秋快乐</div>
-    </div>
     <div class="bowl-wrap">
       <img class="bowl" src="assets/bowl.png" alt="碗">
       <div id="bowlDice"></div>
+      <div class="result-overlay">
+        <div id="resultName" class="result-name lv0">博饼</div>
+        <div id="resultWho" class="result-who">中秋快乐</div>
+      </div>
       <div id="bowlHint" class="bowl-hint"></div>
     </div>
   </div>
+  <audio id="sfxRoll" src="assets/sfx/roll.wav" preload="auto" playsinline></audio>
 
   <!-- 下排玩家 -->
   <div id="rowBottom" class="player-row"></div>
@@ -53,8 +54,8 @@
   <div id="statusBar"></div>
 </div>
 
-<script src="js/mqtt.min.js?v=2"></script>
-<script src="js/net.js?v=2"></script>
-<script src="js/game.js?v=2"></script>
+<script src="js/mqtt.min.js?v=3"></script>
+<script src="js/net.js?v=3"></script>
+<script src="js/game.js?v=3"></script>
 </body>
 </html>
