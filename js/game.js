@@ -246,33 +246,111 @@
     return div;
   }
 
-  function renderCenter(newRoll) {
-    if (S.lastRoll) {
-      el.resultName.textContent = S.lastRoll.result;
-      el.resultName.className = 'result-name lv' + S.lastRoll.level;
-      el.resultWho.textContent = S.lastRoll.emoji + ' ' + S.lastRoll.name + ' 掷出';
+  const rollAnim = { raf: 0, seq: 0 };
+  const bowlWrap = () => el.bowlDice && el.bowlDice.parentElement;
+
+  function stopRollAnim() {
+    if (rollAnim.raf) cancelAnimationFrame(rollAnim.raf);
+    rollAnim.raf = 0;
+    const wrap = bowlWrap();
+    if (wrap) wrap.classList.remove('rattling');
+  }
+
+  function placeDie(img, x, y, r) {
+    img.style.left = x + '%';
+    img.style.top = y + '%';
+    img.style.setProperty('--r', r + 'deg');
+  }
+
+  function paintDice(dice, seq, settle) {
+    el.bowlDice.innerHTML = '';
+    if (!dice) return;
+    dice.forEach((v, i) => {
+      const img = document.createElement('img');
+      img.src = diceSrc(v);
+      img.alt = String(v);
+      const pos = dicePos(seq, i);
+      placeDie(img, pos.x, pos.y, pos.r);
+      if (settle) img.classList.add('settle');
+      el.bowlDice.appendChild(img);
+    });
+  }
+
+  function showResultText(roll) {
+    if (roll) {
+      el.resultName.textContent = roll.result;
+      el.resultName.className = 'result-name lv' + roll.level;
+      el.resultWho.textContent = roll.emoji + ' ' + roll.name + ' 掷出';
     } else {
       el.resultName.textContent = '博饼';
       el.resultName.className = 'result-name lv0';
       el.resultWho.textContent = '中秋快乐';
     }
-    el.bowlDice.innerHTML = '';
+  }
+
+  function rattlePos(i) {
+    const ang = Math.random() * Math.PI * 2;
+    const rr = 6 + Math.random() * 16;
+    return {
+      x: 50 + Math.cos(ang) * rr,
+      y: 54 + Math.sin(ang) * rr * 0.84,
+      r: Math.round((Math.random() - 0.5) * 220),
+      v: 1 + Math.floor(Math.random() * 6),
+    };
+  }
+
+  function playRollAnim(roll) {
+    stopRollAnim();
+    rollAnim.seq = roll.seq;
+    showResultText(null);
+    el.resultName.textContent = '摇骰中';
+    el.resultWho.textContent = '';
+    el.bowlHint.textContent = '';
+    const wrap = bowlWrap();
+    if (wrap) wrap.classList.add('rattling');
+    paintDice([1, 2, 3, 4, 5, 6], roll.seq, false);
+    const imgs = Array.from(el.bowlDice.querySelectorAll('img'));
+    playRollSfx();
+    const t0 = performance.now();
+    const DURATION = 780;
+    const STEP = 48;
+    let last = 0;
+    const tick = now => {
+      if (rollAnim.seq !== roll.seq) return;
+      const elapsed = now - t0;
+      if (elapsed >= DURATION) {
+        rollAnim.raf = 0;
+        if (wrap) wrap.classList.remove('rattling');
+        showResultText(roll);
+        paintDice(roll.dice, roll.seq, true);
+        return;
+      }
+      if (now - last >= STEP) {
+        last = now;
+        imgs.forEach((img, i) => {
+          const p = rattlePos(i);
+          img.src = diceSrc(p.v);
+          placeDie(img, p.x, p.y, p.r);
+        });
+      }
+      rollAnim.raf = requestAnimationFrame(tick);
+    };
+    rollAnim.raf = requestAnimationFrame(tick);
+  }
+
+  function renderCenter(newRoll) {
+    if (newRoll && S.lastRoll) {
+      playRollAnim(S.lastRoll);
+      return;
+    }
+    if (rollAnim.raf && S.lastRoll && S.lastRoll.seq === rollAnim.seq) return;
+    stopRollAnim();
+    showResultText(S.lastRoll);
     if (S.lastRoll) {
-      S.lastRoll.dice.forEach((v, i) => {
-        const img = document.createElement('img');
-        img.src = diceSrc(v);
-        img.alt = String(v);
-        const pos = dicePos(S.lastRoll.seq, i);
-        img.style.left = pos.x + '%';
-        img.style.top = pos.y + '%';
-        img.style.setProperty('--r', pos.r + 'deg');
-        img.style.setProperty('--delay', (i * 0.045) + 's');
-        if (newRoll) img.classList.add('drop');
-        el.bowlDice.appendChild(img);
-      });
+      paintDice(S.lastRoll.dice, S.lastRoll.seq, false);
       el.bowlHint.textContent = '';
-      if (newRoll) playRollSfx();
     } else {
+      el.bowlDice.innerHTML = '';
       const turnP = S.players.find(p => p.id === S.turn);
       el.bowlHint.textContent = turnP
         ? (turnP.id === Net.myId ? '轮到你掷骰子！' : '等待 ' + turnP.name + ' 掷骰…')
@@ -335,6 +413,7 @@
   }
 
   function backToLobby() {
+    stopRollAnim();
     Net.destroy();
     S.code = ''; S.players = []; S.turn = ''; S.lastRoll = null; S.sigLost = false;
     lastSeenSeq = 0;
