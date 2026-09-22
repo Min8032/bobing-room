@@ -247,31 +247,22 @@
   }
 
   const rollAnim = { raf: 0, seq: 0 };
-  const bowlWrap = () => el.bowlDice && el.bowlDice.parentElement;
 
   function stopRollAnim() {
     if (rollAnim.raf) cancelAnimationFrame(rollAnim.raf);
     rollAnim.raf = 0;
-    const wrap = bowlWrap();
-    if (wrap) wrap.classList.remove('rattling');
   }
 
-  function placeDie(img, x, y, r) {
-    img.style.left = x + '%';
-    img.style.top = y + '%';
-    img.style.setProperty('--r', r + 'deg');
-  }
-
-  function paintDice(dice, seq, settle) {
+  function paintDice(dice) {
     el.bowlDice.innerHTML = '';
     if (!dice) return;
     dice.forEach((v, i) => {
       const img = document.createElement('img');
       img.src = diceSrc(v);
       img.alt = String(v);
-      const pos = dicePos(seq, i);
-      placeDie(img, pos.x, pos.y, pos.r);
-      if (settle) img.classList.add('settle');
+      const pos = dicePos(i);
+      img.style.left = pos.x + '%';
+      img.style.top = pos.y + '%';
       el.bowlDice.appendChild(img);
     });
   }
@@ -288,17 +279,6 @@
     }
   }
 
-  function rattlePos(i) {
-    const ang = Math.random() * Math.PI * 2;
-    const rr = 6 + Math.random() * 16;
-    return {
-      x: 50 + Math.cos(ang) * rr,
-      y: 54 + Math.sin(ang) * rr * 0.84,
-      r: Math.round((Math.random() - 0.5) * 220),
-      v: 1 + Math.floor(Math.random() * 6),
-    };
-  }
-
   function playRollAnim(roll) {
     stopRollAnim();
     rollAnim.seq = roll.seq;
@@ -306,32 +286,24 @@
     el.resultName.textContent = '摇骰中';
     el.resultWho.textContent = '';
     el.bowlHint.textContent = '';
-    const wrap = bowlWrap();
-    if (wrap) wrap.classList.add('rattling');
-    paintDice([1, 2, 3, 4, 5, 6], roll.seq, false);
+    paintDice([1, 2, 3, 4, 5, 6]);
     const imgs = Array.from(el.bowlDice.querySelectorAll('img'));
     playRollSfx();
     const t0 = performance.now();
-    const DURATION = 780;
-    const STEP = 48;
+    const DURATION = 720;
+    const STEP = 70;
     let last = 0;
     const tick = now => {
       if (rollAnim.seq !== roll.seq) return;
-      const elapsed = now - t0;
-      if (elapsed >= DURATION) {
+      if (now - t0 >= DURATION) {
         rollAnim.raf = 0;
-        if (wrap) wrap.classList.remove('rattling');
+        imgs.forEach((img, i) => { img.src = diceSrc(roll.dice[i]); });
         showResultText(roll);
-        paintDice(roll.dice, roll.seq, true);
         return;
       }
       if (now - last >= STEP) {
         last = now;
-        imgs.forEach((img, i) => {
-          const p = rattlePos(i);
-          img.src = diceSrc(p.v);
-          placeDie(img, p.x, p.y, p.r);
-        });
+        imgs.forEach(img => { img.src = diceSrc(1 + Math.floor(Math.random() * 6)); });
       }
       rollAnim.raf = requestAnimationFrame(tick);
     };
@@ -347,7 +319,7 @@
     stopRollAnim();
     showResultText(S.lastRoll);
     if (S.lastRoll) {
-      paintDice(S.lastRoll.dice, S.lastRoll.seq, false);
+      paintDice(S.lastRoll.dice);
       el.bowlHint.textContent = '';
     } else {
       el.bowlDice.innerHTML = '';
@@ -358,29 +330,13 @@
     }
   }
 
-  // 碗底中央一簇：中心 1 颗 + 周围 5 颗（所有端同一伪随机，互不重叠）
-  function dicePos(seq, i) {
-    const rand = mulberry32(seq * 100 + i);
-    const cx = 50, cy = 57;          // 碗底中心
-    if (i === 0) {
-      return { x: cx + (rand() - 0.5) * 2.2, y: cy + (rand() - 0.5) * 2.2,
-               r: Math.round((rand() - 0.5) * 24) };
-    }
-    const ang = ((i - 1) / 5) * Math.PI * 2 - Math.PI / 2 + (rand() - 0.5) * 0.18;
-    const rr = 17.6 + (rand() - 0.5) * 1.2;
-    return {
-      x: cx + Math.cos(ang) * rr,
-      y: cy + Math.sin(ang) * rr * 0.86,
-      r: Math.round((rand() - 0.5) * 28),
-    };
-  }
-  function mulberry32(a) {
-    return function () {
-      a |= 0; a = a + 0x6D2B79F5 | 0;
-      let t = Math.imul(a ^ a >>> 15, 1 | a);
-      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    };
+  // 中间 1 颗，周围 5 颗正五边形，不重叠
+  function dicePos(i) {
+    const cx = 50, cy = 56;
+    if (i === 0) return { x: cx, y: cy };
+    const ang = ((i - 1) / 5) * Math.PI * 2 - Math.PI / 2;
+    const rr = 18.2;
+    return { x: cx + Math.cos(ang) * rr, y: cy + Math.sin(ang) * rr * 0.92 };
   }
 
   function renderStatus() {

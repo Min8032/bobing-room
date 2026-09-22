@@ -103,153 +103,85 @@ def gen_bowl():
 
 PIPS = {
     1: [(0.50, 0.50)],
-    2: [(0.28, 0.28), (0.72, 0.72)],
-    3: [(0.28, 0.28), (0.50, 0.50), (0.72, 0.72)],
-    4: [(0.28, 0.28), (0.72, 0.28), (0.28, 0.72), (0.72, 0.72)],
-    5: [(0.28, 0.28), (0.72, 0.28), (0.50, 0.50), (0.28, 0.72), (0.72, 0.72)],
-    6: [(0.28, 0.24), (0.28, 0.50), (0.28, 0.76),
-        (0.72, 0.24), (0.72, 0.50), (0.72, 0.76)],
+    2: [(0.26, 0.26), (0.74, 0.74)],
+    3: [(0.26, 0.26), (0.50, 0.50), (0.74, 0.74)],
+    4: [(0.26, 0.26), (0.74, 0.26), (0.26, 0.74), (0.74, 0.74)],
+    5: [(0.26, 0.26), (0.74, 0.26), (0.50, 0.50), (0.26, 0.74), (0.74, 0.74)],
+    6: [(0.26, 0.22), (0.26, 0.50), (0.26, 0.78),
+        (0.74, 0.22), (0.74, 0.50), (0.74, 0.78)],
 }
-# top -> (front, right); opposites sum to 7
-FACE_TRIPLE = {
-    1: (2, 3), 2: (3, 1), 3: (5, 1),
-    4: (2, 6), 5: (4, 3), 6: (5, 4),
-}
+def _sd_round_rect(x, y, hw, hh, rad):
+    ax = np.abs(x) - hw + rad
+    ay = np.abs(y) - hh + rad
+    return np.hypot(np.maximum(ax, 0), np.maximum(ay, 0)) + np.minimum(np.maximum(ax, ay), 0) - rad
 
 
-def _rot_x(a):
-    c, s = math.cos(a), math.sin(a)
-    return np.array([[1, 0, 0], [0, c, -s], [0, s, c]], dtype=np.float32)
+def _render_die_2d(face):
+    """Kenney-style top-down tile: ivory plastic, crisp inset pips."""
+    S = 512
+    yy, xx = np.mgrid[0:S, 0:S].astype(np.float32)
+    cx = cy = (S - 1) * 0.5
+    x = (xx - cx) / (S * 0.42)
+    y = (yy - cy) / (S * 0.42)
+    d = _sd_round_rect(x, y, 0.92, 0.92, 0.22)
+    inside = d < 0
+    edge = np.clip(1.0 - np.abs(d) / 0.055, 0, 1)
 
-
-def _rot_y(a):
-    c, s = math.cos(a), math.sin(a)
-    return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]], dtype=np.float32)
-
-
-def _sd_round_box(p, b, rad):
-    q = np.abs(p) - b
-    outside = np.linalg.norm(np.maximum(q, 0.0), axis=-1)
-    inside = np.minimum(np.maximum(q[..., 0], np.maximum(q[..., 1], q[..., 2])), 0.0)
-    return outside + inside - rad
-
-
-def _pip_mask(u, v, face):
-    m = np.zeros(u.shape, dtype=np.float32)
-    for pu, pv in PIPS[face]:
-        d = np.sqrt((u - pu) ** 2 + (v - pv) ** 2)
-        m = np.maximum(m, np.clip(1.0 - d / 0.128, 0, 1))
-    return m
-
-
-def _render_die(top):
-    """Raymarched rounded cube: glossy ivory, red 1/4, recessed pips."""
-    front, right = FACE_TRIPLE[top]
-    SS, W, H = 2, 280, 300
-    sw, sh = W * SS, H * SS
-    half = np.array([0.72, 0.72, 0.72], dtype=np.float32)
-    rad = 0.17
-    R = _rot_x(math.radians(-38)) @ _rot_y(math.radians(28))
-    Rt = R.T
-
-    xs = np.linspace(-1.12, 1.12, sw, dtype=np.float32)
-    ys = np.linspace(1.22, -1.28, sh, dtype=np.float32)
-    xx, yy = np.meshgrid(xs, ys)
-    cam = np.array([0.0, 0.15, 3.55], dtype=np.float32)
-    dirs = np.stack([xx, yy, np.full_like(xx, -3.15)], axis=-1)
-    dirs /= np.linalg.norm(dirs, axis=-1, keepdims=True)
-
-    t = np.full((sh, sw), 2.15, dtype=np.float32)
-    alive = np.ones((sh, sw), dtype=bool)
-    for _ in range(30):
-        p = cam + dirs * t[..., None]
-        d = _sd_round_box(p @ Rt, half, rad)
-        t = np.where(alive, t + d, t)
-        alive &= (d > 0.0018) & (t < 7.5)
-
-    hit = t < 7.4
-    p = cam + dirs * t[..., None]
-    po = p @ Rt
     eps = 0.004
-    n = np.stack([
-        _sd_round_box((p + [eps, 0, 0]) @ Rt, half, rad) - _sd_round_box((p - [eps, 0, 0]) @ Rt, half, rad),
-        _sd_round_box((p + [0, eps, 0]) @ Rt, half, rad) - _sd_round_box((p - [0, eps, 0]) @ Rt, half, rad),
-        _sd_round_box((p + [0, 0, eps]) @ Rt, half, rad) - _sd_round_box((p - [0, 0, eps]) @ Rt, half, rad),
-    ], axis=-1)
-    n /= np.maximum(np.linalg.norm(n, axis=-1, keepdims=True), 1e-5)
+    nx = _sd_round_rect(x + eps, y, 0.92, 0.92, 0.22) - _sd_round_rect(x - eps, y, 0.92, 0.92, 0.22)
+    ny = _sd_round_rect(x, y + eps, 0.92, 0.92, 0.22) - _sd_round_rect(x, y - eps, 0.92, 0.92, 0.22)
+    nlen = np.maximum(np.hypot(nx, ny), 1e-4)
+    nx, ny = nx / nlen, ny / nlen
+    light = np.clip(-nx * 0.55 - ny * 0.62, 0, 1)
 
-    ax = np.abs(po)
-    face_id = np.argmax(ax, axis=-1)
-    sign = np.take_along_axis(po, face_id[..., None], -1)[..., 0]
-    u = np.zeros((sh, sw), dtype=np.float32)
-    v = np.zeros((sh, sw), dtype=np.float32)
-    # x-face: u=y v=z ; y-face: u=x v=z ; z-face: u=x v=y
-    fx, fy, fz = face_id == 0, face_id == 1, face_id == 2
-    u = np.where(fx, (po[..., 1] / half[1] + 1) * 0.5, u)
-    v = np.where(fx, (po[..., 2] / half[2] + 1) * 0.5, v)
-    u = np.where(fy, (po[..., 0] / half[0] + 1) * 0.5, u)
-    v = np.where(fy, (po[..., 2] / half[2] + 1) * 0.5, v)
-    u = np.where(fz, (po[..., 0] / half[0] + 1) * 0.5, u)
-    v = np.where(fz, (po[..., 1] / half[1] + 1) * 0.5, v)
+    rng = np.random.default_rng(40 + face)
+    grain = rng.random((S, S)).astype(np.float32)
+    grain = np.asarray(Image.fromarray((grain * 255).astype(np.uint8), 'L').filter(
+        ImageFilter.GaussianBlur(0.7))).astype(np.float32) / 255.0
+    tex = 0.96 + 0.05 * grain + 0.025 * np.sin(xx / 7.0 + grain * 4)
 
-    # After Ry then Rx: +Z mostly top, +X right, -Y front
-    # After this camera, +Y is the visible top, +Z the front, +X the right
-    face_n = np.zeros((sh, sw), dtype=np.int32)
-    face_n = np.where(fy & (sign > 0), top, face_n)
-    face_n = np.where(fy & (sign < 0), 7 - top, face_n)
-    face_n = np.where(fz & (sign > 0), front, face_n)
-    face_n = np.where(fz & (sign < 0), 7 - front, face_n)
-    face_n = np.where(fx & (sign > 0), right, face_n)
-    face_n = np.where(fx & (sign < 0), 7 - right, face_n)
+    ivory = np.array([248, 239, 224], dtype=np.float32)
+    shade = 0.90 + 0.10 * light
+    gloss = np.clip(0.10 - 0.16 * ((x + 0.28) ** 2 + (y + 0.32) ** 2), 0, 1)
+    rgb = ivory * (shade * tex)[..., None]
+    rgb += gloss[..., None] * 46
+    rgb *= (1.0 - edge * 0.22)[..., None]
 
-    pip = np.zeros((sh, sw), dtype=np.float32)
-    pip_red = np.zeros((sh, sw), dtype=bool)
-    for fn in range(1, 7):
-        sel = face_n == fn
-        if not np.any(sel):
-            continue
-        pm = _pip_mask(u, v, fn)
-        pip = np.where(sel, pm, pip)
-        if fn in (1, 4):
-            pip_red |= sel & (pm > 0.25)
+    u = (x + 1) * 0.5
+    v = (y + 1) * 0.5
+    pip_r = 0.118 if face != 1 else 0.132
+    pip = np.zeros((S, S), dtype=np.float32)
+    for pu, pv in PIPS[face]:
+        dist = np.hypot(u - pu, v - pv)
+        pip = np.maximum(pip, np.clip((pip_r - dist) / 0.012, 0, 1))
+    pip_col = np.array([196, 24, 28] if face in (1, 4) else [32, 26, 24], dtype=np.float32)
+    well = np.clip(pip, 0, 1)
+    rgb = rgb * (1 - well * 0.96)[..., None] + pip_col * (well * 0.96)[..., None]
+    # tiny pip highlight
+    hi = np.zeros((S, S), dtype=np.float32)
+    for pu, pv in PIPS[face]:
+        dist = np.hypot(u - pu + 0.018, v - pv + 0.018)
+        hi = np.maximum(hi, np.clip(1.0 - dist / (pip_r * 0.38), 0, 1))
+    rgb += (hi * well * 38)[..., None]
 
-    ivory = np.array([252, 246, 236], dtype=np.float32)
-    L = np.array([0.42, 0.22, 0.88], dtype=np.float32)
-    L /= np.linalg.norm(L)
-    V = -dirs
-    diff = np.clip(np.sum(n * L, axis=-1), 0, 1)
-    halfv = V + L
-    halfv /= np.maximum(np.linalg.norm(halfv, axis=-1, keepdims=True), 1e-5)
-    spec = np.clip(np.sum(n * halfv, axis=-1), 0, 1) ** 42
-    wrap = 0.38 + 0.62 * diff
-    rgb = ivory * wrap[..., None]
-    rgb += spec[..., None] * 95
-    # face AO: slightly darker sides
-    rgb *= np.where(fz, 1.0, np.where(fx, 0.86, 0.78))[..., None]
-
-    red = np.array([212, 28, 30], dtype=np.float32)
-    black = np.array([28, 24, 22], dtype=np.float32)
-    pip_col = np.where(pip_red[..., None], red, black)
-    k = np.clip(pip, 0, 1)[..., None]
-    rgb = rgb * (1 - k * 0.92) + pip_col * (k * 0.92)
-    rgb += (pip * spec * 40)[..., None]
-
-    a = hit.astype(np.float32)
-    rgba = np.zeros((sh, sw, 4), dtype=np.float32)
+    a = np.clip(0.5 - d / 0.012, 0, 1)
+    rgba = np.zeros((S, S, 4), dtype=np.float32)
     rgba[..., :3] = np.clip(rgb, 0, 255)
     rgba[..., 3] = a * 255
-    im = Image.fromarray(rgba.astype(np.uint8), 'RGBA').resize((W, H), Image.Resampling.LANCZOS)
+    die = Image.fromarray(rgba.astype(np.uint8), 'RGBA')
 
-    shadow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    sd = ImageDraw.Draw(shadow)
-    sd.ellipse([W * 0.22, H * 0.78, W * 0.80, H * 0.96], fill=(0, 0, 0, 78))
-    shadow = shadow.filter(ImageFilter.GaussianBlur(8))
-    return Image.alpha_composite(shadow, im)
+    canvas = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    sh = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(sh)
+    m = int(S * 0.10)
+    sd.rounded_rectangle([m + 8, m + 18, S - m + 6, S - m + 14], radius=int(S * 0.16), fill=(0, 0, 0, 70))
+    sh = sh.filter(ImageFilter.GaussianBlur(10))
+    return Image.alpha_composite(sh, die)
 
 
 def gen_dice():
     for n in range(1, 7):
-        _render_die(n).save(os.path.join(OUT, 'dice', '%d.png' % n))
+        _render_die_2d(n).save(os.path.join(OUT, 'dice', '%d.png' % n))
     print('dice 1-6')
 
 

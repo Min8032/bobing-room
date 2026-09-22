@@ -148,33 +148,11 @@ header {
   aspect-ratio: 1;
 }
 .bowl-wrap .bowl { display: none; }
-.bowl-wrap.rattling {
-  animation: bowlRattle .78s linear;
-}
-@keyframes bowlRattle {
-  0%, 100% { transform: translate(0, 0) rotate(0); }
-  12% { transform: translate(-1.6%, 1.1%) rotate(-1.6deg); }
-  24% { transform: translate(2.1%, -0.8%) rotate(1.8deg); }
-  36% { transform: translate(-1.8%, -1.2%) rotate(-1.2deg); }
-  48% { transform: translate(1.4%, 1.4%) rotate(1.4deg); }
-  60% { transform: translate(-2.0%, 0.4%) rotate(-1.8deg); }
-  72% { transform: translate(1.6%, -1.0%) rotate(1.1deg); }
-  86% { transform: translate(-0.7%, 0.6%) rotate(-0.6deg); }
-}
 #bowlDice { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
 #bowlDice img {
   position: absolute;
-  width: 17%;
-  transform: translate(-50%, -50%) rotate(var(--r, 0deg));
-  transform-origin: 50% 50%;
-  filter: drop-shadow(0 7px 5px rgba(40, 0, 0, .28));
-}
-#bowlDice img.settle {
-  animation: diceSettle .22s cubic-bezier(.2, .8, .2, 1) both;
-}
-@keyframes diceSettle {
-  0%   { transform: translate(-50%, -50%) rotate(calc(var(--r) + 28deg)) scale(.86); }
-  100% { transform: translate(-50%, -50%) rotate(var(--r)) scale(1); }
+  width: 16.5%;
+  transform: translate(-50%, -50%);
 }
 .bowl-hint {
   position: absolute; left: 0; right: 0; top: 58%;
