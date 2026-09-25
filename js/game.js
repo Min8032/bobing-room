@@ -253,17 +253,51 @@
     rollAnim.raf = 0;
   }
 
-  function paintDice(dice) {
+  function preloadDiceFaces() {
+    for (let n = 1; n <= 6; n++) {
+      const im = new Image();
+      im.src = diceSrc(n);
+    }
+  }
+
+  function makeDie(i) {
+    const wrap = document.createElement('div');
+    wrap.className = 'die';
+    const pos = dicePos(i);
+    wrap.style.left = pos.x + '%';
+    wrap.style.top = pos.y + '%';
+    const spin = document.createElement('span');
+    spin.className = 'die-spin';
+    const img = document.createElement('img');
+    img.alt = '';
+    wrap.appendChild(spin);
+    wrap.appendChild(img);
+    return wrap;
+  }
+
+  function revealDie(wrap, n, onReady) {
+    const img = wrap.querySelector('img');
+    let told = false;
+    const done = () => {
+      if (img.dataset.face !== String(n)) return;
+      wrap.classList.add('ready');
+      if (onReady && !told) { told = true; onReady(); }
+    };
+    wrap.classList.remove('ready');
+    img.dataset.face = String(n);
+    img.onload = done;
+    img.onerror = done;
+    img.src = diceSrc(n);
+    if (img.complete && img.naturalWidth) done();
+  }
+
+  function paintDice(dice, spinning) {
     el.bowlDice.innerHTML = '';
     if (!dice) return;
     dice.forEach((v, i) => {
-      const img = document.createElement('img');
-      img.src = diceSrc(v);
-      img.alt = String(v);
-      const pos = dicePos(i);
-      img.style.left = pos.x + '%';
-      img.style.top = pos.y + '%';
-      el.bowlDice.appendChild(img);
+      const wrap = makeDie(i);
+      el.bowlDice.appendChild(wrap);
+      if (!spinning) revealDie(wrap, v);
     });
   }
 
@@ -286,26 +320,24 @@
     el.resultName.textContent = '摇骰中';
     el.resultWho.textContent = '';
     el.bowlHint.textContent = '';
-    paintDice([1, 2, 3, 4, 5, 6]);
-    const imgs = Array.from(el.bowlDice.querySelectorAll('img'));
+    paintDice(roll.dice, true);
+    const slots = Array.from(el.bowlDice.children);
     playRollSfx();
     const t0 = performance.now();
     const DURATION = 720;
-    const STEP = 70;
-    let last = 0;
     const tick = now => {
       if (rollAnim.seq !== roll.seq) return;
-      if (now - t0 >= DURATION) {
-        rollAnim.raf = 0;
-        imgs.forEach((img, i) => { img.src = diceSrc(roll.dice[i]); });
-        showResultText(roll);
+      if (now - t0 < DURATION) {
+        rollAnim.raf = requestAnimationFrame(tick);
         return;
       }
-      if (now - last >= STEP) {
-        last = now;
-        imgs.forEach(img => { img.src = diceSrc(1 + Math.floor(Math.random() * 6)); });
-      }
-      rollAnim.raf = requestAnimationFrame(tick);
+      rollAnim.raf = 0;
+      let pending = slots.length;
+      const maybeShow = () => {
+        pending--;
+        if (pending <= 0 && rollAnim.seq === roll.seq) showResultText(roll);
+      };
+      slots.forEach((wrap, i) => revealDie(wrap, roll.dice[i], maybeShow));
     };
     rollAnim.raf = requestAnimationFrame(tick);
   }
@@ -471,5 +503,6 @@
   /* ---------- 初始化 ---------- */
   el.nickname.value = localStorage.getItem('bobing_name') || '';
   el.roomCode.value = localStorage.getItem('bobing_code') || '';
+  preloadDiceFaces();
   showScreen('lobby');
 })();
